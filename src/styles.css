@@ -1,0 +1,147 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * STRIDE design system — "Kinetic glass"
+ * Dark athletic register: deep ink surfaces, frost text, volt accent.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-volt: var(--volt);
+  --color-ink: var(--ink);
+  --color-steel: var(--steel);
+  --color-frost: var(--frost);
+  --color-mist: var(--mist);
+  --color-avatar-1: var(--avatar-1);
+  --color-avatar-2: var(--avatar-2);
+  --color-avatar-3: var(--avatar-3);
+  --color-avatar-4: var(--avatar-4);
+  --color-avatar-5: var(--avatar-5);
+  --color-avatar-6: var(--avatar-6);
+  --font-display: "Archivo", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+@source inline("bg-avatar-1 bg-avatar-2 bg-avatar-3 bg-avatar-4 bg-avatar-5 bg-avatar-6");
+
+:root {
+  --radius: 0.875rem;
+  --volt: oklch(0.912 0.21 116.2);
+  --ink: oklch(0.163 0.028 259.5);
+  --steel: oklch(0.215 0.035 260.8);
+  --frost: oklch(0.905 0.02 241.5);
+  --mist: oklch(0.702 0.032 250.9);
+  --avatar-1: oklch(0.34 0.05 55);
+  --avatar-2: oklch(0.32 0.05 235);
+  --avatar-3: oklch(0.34 0.045 105);
+  --avatar-4: oklch(0.33 0.045 250);
+  --avatar-5: oklch(0.31 0.04 300);
+  --avatar-6: oklch(0.33 0.045 185);
+
+  --background: var(--ink);
+  --foreground: var(--frost);
+  --card: oklch(0.905 0.02 241.5 / 6%);
+  --card-foreground: var(--frost);
+  --popover: var(--steel);
+  --popover-foreground: var(--frost);
+  --primary: var(--volt);
+  --primary-foreground: var(--ink);
+  --secondary: oklch(0.905 0.02 241.5 / 8%);
+  --secondary-foreground: var(--frost);
+  --muted: oklch(0.905 0.02 241.5 / 6%);
+  --muted-foreground: var(--mist);
+  --accent: oklch(0.905 0.02 241.5 / 10%);
+  --accent-foreground: var(--frost);
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: var(--frost);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: var(--volt);
+  --sidebar: var(--ink);
+  --sidebar-foreground: var(--frost);
+  --sidebar-primary: var(--volt);
+  --sidebar-primary-foreground: var(--ink);
+  --sidebar-accent: var(--steel);
+  --sidebar-accent-foreground: var(--frost);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: var(--volt);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-body);
+  }
+}
+
+/* Kinetic glass scene backdrop */
+@utility bg-scene {
+  background:
+    radial-gradient(120% 120% at 15% -10%, oklch(0.32 0.08 258) 0%, var(--ink) 45%, var(--ink) 100%);
+}
+
+@utility bg-scene-streak {
+  background:
+    linear-gradient(115deg, transparent 0%, transparent 38%, oklch(0.912 0.21 116.2 / 10%) 46%, oklch(0.912 0.21 116.2 / 2%) 56%, transparent 72%),
+    radial-gradient(55% 55% at 92% 110%, oklch(0.55 0.19 262 / 30%) 0%, transparent 70%);
+}
+
+@utility glass-card {
+  background: oklch(0.905 0.02 241.5 / 6%);
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 10%);
+  backdrop-filter: blur(6px);
+}
+
+@utility volt-glow {
+  box-shadow: 0 18px 50px -12px oklch(0.912 0.21 116.2 / 45%);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
