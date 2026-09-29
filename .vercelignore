@@ -1,0 +1,9 @@
+# Secrets and local-only files never go to Vercel (env vars are set in the dashboard)
+.env
+.env.*
+*.local
+.claude
+# Local build output / caches (Vercel builds from source)
+dist
+.tanstack
+.output
