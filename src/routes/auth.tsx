@@ -26,6 +26,22 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  async function handleForgot() {
+    setError(null);
+    if (!email) {
+      setError("Enter your email above, then tap “Forgot password?”.");
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setBusy(false);
+    if (error) setError(error.message);
+    else setResetSent(true);
+  }
 
   async function handleEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -98,7 +114,7 @@ function AuthPage() {
         </Link>
 
         <div className="glass-card rounded-3xl p-6">
-          {confirmEmail ? (
+          {confirmEmail || resetSent ? (
             <div className="text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-full bg-volt/15 font-display text-xl text-volt">
                 ✓
@@ -107,11 +123,14 @@ function AuthPage() {
                 Check your email
               </h1>
               <p className="mt-2 text-sm text-mist">
-                We sent a confirmation link to {email}. Click it, then come back and sign in.
+                {resetSent
+                  ? `We sent a link to ${email}. Click it to choose a new password.`
+                  : `We sent a confirmation link to ${email}. Click it, then come back and sign in.`}
               </p>
               <button
                 onClick={() => {
                   setConfirmEmail(false);
+                  setResetSent(false);
                   setMode("signin");
                 }}
                 className="mt-6 w-full rounded-full bg-volt py-3 font-display text-sm font-bold text-ink transition hover:brightness-105"
@@ -157,6 +176,18 @@ function AuthPage() {
                   minLength={6}
                   className="w-full rounded-xl bg-muted px-4 py-3 text-sm text-frost placeholder:text-mist/70 ring-1 ring-border focus:outline-none focus:ring-volt"
                 />
+                {mode === "signin" && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={handleForgot}
+                      disabled={busy}
+                      className="text-xs text-mist hover:text-volt"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
 
