@@ -1,1 +1,7 @@
 project_id = "qszdeczpidcvzzqeptkh"
+[auth]
+site_url = "https://fit-friends-stride.vercel.app"
+additional_redirect_urls = [
+  "https://fit-friends-stride.vercel.app/**",
+  "http://localhost:8080/**",
+]
