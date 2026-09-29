@@ -36,6 +36,20 @@ function avatarClass(id: string) {
   return AVATAR_BG[h % AVATAR_BG.length];
 }
 
+/** "T1" for a shared place, "1" otherwise; a dash until someone has logged anything. */
+function rankLabel(rank: number, tied: boolean, active: boolean) {
+  if (!active) return "–";
+  return tied ? `T${rank}` : `${rank}`;
+}
+
+function TieBadge() {
+  return (
+    <span className="shrink-0 rounded-full bg-frost/15 px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-frost">
+      Tie
+    </span>
+  );
+}
+
 function StrideDetail() {
   const { id } = Route.useParams();
   const fetchChallenge = useServerFn(getChallenge);
@@ -102,7 +116,7 @@ function StrideDetail() {
               </div>
               <div className="overflow-hidden rounded-[18px] bg-frost/[0.05] ring-1 ring-white/[0.07]">
                 <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-2.5 text-[10px] uppercase tracking-widest text-mist">
-                  <span className="w-4 shrink-0">#</span>
+                  <span className="w-6 shrink-0">#</span>
                   <span className="flex-1">Athlete</span>
                   <span className="w-12 shrink-0 text-right">Weeks</span>
                   <span className="w-12 shrink-0 text-right">Total</span>
@@ -121,18 +135,21 @@ function StrideDetail() {
                       } ${s.isMe ? "bg-volt/[0.06]" : ""}`}
                     >
                       <span
-                        className={`w-4 shrink-0 font-display text-sm font-bold ${
-                          i === 0 ? "text-volt" : "text-frost/45"
+                        className={`w-6 shrink-0 font-display text-sm font-bold ${
+                          s.rank === 1 && s.total > 0 ? "text-volt" : "text-frost/45"
                         }`}
                       >
-                        {i + 1}
+                        {rankLabel(s.rank, s.tied, s.total > 0 || s.weeksWon > 0)}
                       </span>
                       <div
                         className={`grid size-8 shrink-0 place-items-center rounded-full font-display text-[10px] font-semibold text-frost ${avatarClass(s.userId)}`}
                       >
                         {s.initials}
                       </div>
-                      <span className="min-w-0 flex-1 truncate text-sm text-frost">{s.name}</span>
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="truncate text-sm text-frost">{s.name}</span>
+                        {s.tied && s.total > 0 && <TieBadge />}
+                      </span>
                       <span className="w-12 shrink-0 text-right font-display text-sm font-bold text-volt">
                         {s.weeksWon}
                       </span>
@@ -160,21 +177,21 @@ function StrideDetail() {
                   </span>
                 </div>
                 <div className="space-y-2">
-                  {(current ?? data.weeksData[data.weeksData.length - 1])?.rows.map((row, i) => (
+                  {(current ?? data.weeksData[data.weeksData.length - 1])?.rows.map((row) => (
                     <div
                       key={row.userId}
                       className={`flex items-center gap-4 rounded-2xl p-4 ring-1 ${
-                        i === 0 && row.workouts > 0
+                        row.rank === 1 && row.workouts > 0
                           ? "bg-frost/[0.08] ring-white/10"
                           : "bg-frost/[0.04] ring-white/[0.06]"
                       } ${row.isMe ? "outline-1 outline-volt/40" : ""}`}
                     >
                       <div
-                        className={`w-8 shrink-0 font-display text-2xl font-extrabold leading-none ${
-                          i === 0 && row.workouts > 0 ? "text-volt" : "text-frost/45"
+                        className={`w-10 shrink-0 font-display text-2xl font-extrabold leading-none ${
+                          row.rank === 1 && row.workouts > 0 ? "text-volt" : "text-frost/45"
                         }`}
                       >
-                        {i + 1}
+                        {rankLabel(row.rank, row.tied, row.workouts > 0)}
                       </div>
                       <div
                         className={`grid size-11 shrink-0 place-items-center rounded-full font-display text-sm font-semibold text-frost ${avatarClass(row.userId)}`}
@@ -182,8 +199,11 @@ function StrideDetail() {
                         {row.initials}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-display font-semibold leading-tight text-frost">
-                          {row.name}
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-display font-semibold leading-tight text-frost">
+                            {row.name}
+                          </span>
+                          {row.tied && row.workouts > 0 && <TieBadge />}
                         </div>
                         <div className="text-xs text-mist">
                           {row.streak} day{row.streak === 1 ? "" : "s"} in a row
@@ -232,6 +252,9 @@ function StrideDetail() {
                     </div>
                     <span className="text-sm text-frost">{m.name}</span>
                     <span className="font-display text-sm font-bold text-volt">{m.weeksWon}</span>
+                    {m.weeksTied > 0 && (
+                      <span className="text-xs text-mist">· {m.weeksTied} tied</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -333,10 +356,10 @@ function StrideDetail() {
                       <span className="ml-auto text-xs text-mist">{w.label}</span>
                     </div>
                     <div className="space-y-1.5">
-                      {w.rows.map((r, i) => (
+                      {w.rows.map((r) => (
                         <div key={r.userId} className="flex items-center gap-3 text-sm">
-                          <span className="w-4 shrink-0 font-display text-xs text-frost/50">
-                            {i + 1}
+                          <span className="w-6 shrink-0 font-display text-xs text-frost/50">
+                            {rankLabel(r.rank, r.tied, r.workouts > 0)}
                           </span>
                           <span className="min-w-0 flex-1 truncate text-frost">{r.name}</span>
                           <span className="shrink-0 text-xs text-mist">{r.streak}d streak</span>
@@ -347,6 +370,14 @@ function StrideDetail() {
                       ))}
                       {w.rows.length === 0 && (
                         <p className="text-xs text-mist">No members yet.</p>
+                      )}
+                      {w.result && (
+                        <p className="pt-1 text-xs text-mist">
+                          {w.result.kind === "tied" ? "Tied: " : "Won by "}
+                          <span className="font-semibold text-frost">
+                            {w.result.names.join(" & ")}
+                          </span>
+                        </p>
                       )}
                     </div>
                   </div>

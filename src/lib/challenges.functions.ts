@@ -52,6 +52,20 @@ function longestRun(days: Set<string>, weekStart: Date): number {
   return best;
 }
 
+/**
+ * Competition ranking over an already-sorted list: people level on the scoring
+ * metric share a rank (1, 1, 3) and are flagged as tied.
+ */
+function withRanks<T>(rows: T[], same: (a: T, b: T) => boolean) {
+  return rows.map((row, i) => {
+    let first = i;
+    while (first > 0 && same(rows[first - 1]!, row)) first -= 1;
+    const tied =
+      (i > 0 && same(rows[i - 1]!, row)) || (i < rows.length - 1 && same(rows[i + 1]!, row));
+    return { ...row, rank: first + 1, tied };
+  });
+}
+
 export const listMyChallenges = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -267,10 +281,14 @@ export const getChallenge = createServerFn({ method: "GET" })
         workouts: number;
         streak: number;
         isMe: boolean;
+        rank: number;
+        tied: boolean;
       }[];
+      result: { kind: "won" | "tied"; names: string[] } | null;
     }[];
 
     const wins = new Map<string, number>();
+    const ties = new Map<string, number>();
 
     for (let i = 0; i < challenge.weeks; i++) {
       const wStart = addDays(start, i * 7);
@@ -286,7 +304,8 @@ export const getChallenge = createServerFn({ method: "GET" })
         days.get(w.user_id)!.add(dayKey(new Date(w.created_at).toISOString()));
       }
 
-      const rows = memberIds
+      // Workout count decides the rank; streak only orders people within a tie.
+      const sortedRows = memberIds
         .map((id) => ({
           userId: id,
           name: id === userId ? `${nameOf(id)} (you)` : nameOf(id),
@@ -296,12 +315,16 @@ export const getChallenge = createServerFn({ method: "GET" })
           isMe: id === userId,
         }))
         .sort((a, b) => b.workouts - a.workouts || b.streak - a.streak || a.name.localeCompare(b.name));
+      const rows = withRanks(sortedRows, (a, b) => a.workouts === b.workouts);
 
       const started = Date.now() >= wStart.getTime();
       const finished = Date.now() >= wEnd.getTime();
+      let result: { kind: "won" | "tied"; names: string[] } | null = null;
       if (finished && rows[0] && rows[0].workouts > 0) {
-        const top = rows.filter((r) => r.workouts === rows[0]!.workouts);
-        if (top.length === 1) wins.set(top[0]!.userId, (wins.get(top[0]!.userId) ?? 0) + 1);
+        const top = rows.filter((r) => r.rank === 1);
+        const tally = top.length === 1 ? wins : ties;
+        for (const r of top) tally.set(r.userId, (tally.get(r.userId) ?? 0) + 1);
+        result = { kind: top.length === 1 ? "won" : "tied", names: top.map((r) => nameOf(r.userId)) };
       }
 
       weeksOut.push({
@@ -310,6 +333,7 @@ export const getChallenge = createServerFn({ method: "GET" })
         isCurrent: i === currentIndex,
         started,
         rows,
+        result,
       });
     }
 
@@ -345,7 +369,7 @@ export const getChallenge = createServerFn({ method: "GET" })
 
     // Overall standings across the whole Stride: total workouts, weeks won,
     // and best single-week streak.
-    const standings = memberIds
+    const sortedStandings = memberIds
       .map((id) => {
         let total = 0;
         let bestStreak = 0;
@@ -362,6 +386,7 @@ export const getChallenge = createServerFn({ method: "GET" })
           total,
           bestStreak,
           weeksWon: wins.get(id) ?? 0,
+          weeksTied: ties.get(id) ?? 0,
           isMe: id === userId,
         };
       })
@@ -372,6 +397,10 @@ export const getChallenge = createServerFn({ method: "GET" })
           b.bestStreak - a.bestStreak ||
           a.name.localeCompare(b.name),
       );
+    const standings = withRanks(
+      sortedStandings,
+      (a, b) => a.weeksWon === b.weeksWon && a.total === b.total && a.bestStreak === b.bestStreak,
+    );
 
     return {
       id: challenge.id,
@@ -388,6 +417,7 @@ export const getChallenge = createServerFn({ method: "GET" })
         name: id === userId ? `${nameOf(id)} (you)` : nameOf(id),
         initials: initials(nameOf(id)),
         weeksWon: wins.get(id) ?? 0,
+        weeksTied: ties.get(id) ?? 0,
       })),
       standings,
       pending: (members ?? [])
