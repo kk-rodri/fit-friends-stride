@@ -36,10 +36,9 @@ function avatarClass(id: string) {
   return AVATAR_BG[h % AVATAR_BG.length];
 }
 
-/** "T1" for a shared place, "1" otherwise; a dash until someone has logged anything. */
-function rankLabel(rank: number, tied: boolean, active: boolean) {
-  if (!active) return "–";
-  return tied ? `T${rank}` : `${rank}`;
+/** Shared places show the same number (the Tie badge marks them); a dash until someone has logged anything. */
+function rankLabel(rank: number, active: boolean) {
+  return active ? `${rank}` : "–";
 }
 
 function TieBadge() {
@@ -139,7 +138,7 @@ function StrideDetail() {
                           s.rank === 1 && s.total > 0 ? "text-volt" : "text-frost/45"
                         }`}
                       >
-                        {rankLabel(s.rank, s.tied, s.total > 0 || s.weeksWon > 0)}
+                        {rankLabel(s.rank, s.total > 0 || s.weeksWon > 0)}
                       </span>
                       <div
                         className={`grid size-8 shrink-0 place-items-center rounded-full font-display text-[10px] font-semibold text-frost ${avatarClass(s.userId)}`}
@@ -191,7 +190,7 @@ function StrideDetail() {
                           row.rank === 1 && row.workouts > 0 ? "text-volt" : "text-frost/45"
                         }`}
                       >
-                        {rankLabel(row.rank, row.tied, row.workouts > 0)}
+                        {rankLabel(row.rank, row.workouts > 0)}
                       </div>
                       <div
                         className={`grid size-11 shrink-0 place-items-center rounded-full font-display text-sm font-semibold text-frost ${avatarClass(row.userId)}`}
@@ -359,7 +358,7 @@ function StrideDetail() {
                       {w.rows.map((r) => (
                         <div key={r.userId} className="flex items-center gap-3 text-sm">
                           <span className="w-6 shrink-0 font-display text-xs text-frost/50">
-                            {rankLabel(r.rank, r.tied, r.workouts > 0)}
+                            {rankLabel(r.rank, r.workouts > 0)}
                           </span>
                           <span className="min-w-0 flex-1 truncate text-frost">{r.name}</span>
                           <span className="shrink-0 text-xs text-mist">{r.streak}d streak</span>

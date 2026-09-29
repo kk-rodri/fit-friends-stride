@@ -53,16 +53,17 @@ function longestRun(days: Set<string>, weekStart: Date): number {
 }
 
 /**
- * Competition ranking over an already-sorted list: people level on the scoring
- * metric share a rank (1, 1, 3) and are flagged as tied.
+ * Dense ranking over an already-sorted list: people level on the scoring
+ * metric share a rank and the next person takes the next number (1, 1, 2),
+ * with everyone in a shared place flagged as tied.
  */
 function withRanks<T>(rows: T[], same: (a: T, b: T) => boolean) {
+  let rank = 0;
   return rows.map((row, i) => {
-    let first = i;
-    while (first > 0 && same(rows[first - 1]!, row)) first -= 1;
+    if (i === 0 || !same(rows[i - 1]!, row)) rank += 1;
     const tied =
       (i > 0 && same(rows[i - 1]!, row)) || (i < rows.length - 1 && same(rows[i + 1]!, row));
-    return { ...row, rank: first + 1, tied };
+    return { ...row, rank, tied };
   });
 }
 
