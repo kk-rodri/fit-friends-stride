@@ -33,3 +33,6 @@ dist-ssr
 
 # Environment
 .env
+
+# Vercel build output / link
+.vercel
