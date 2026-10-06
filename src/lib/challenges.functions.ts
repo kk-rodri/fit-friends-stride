@@ -400,7 +400,8 @@ export const getChallenge = createServerFn({ method: "GET" })
       );
     const standings = withRanks(
       sortedStandings,
-      (a, b) => a.weeksWon === b.weeksWon && a.total === b.total && a.bestStreak === b.bestStreak,
+      // Streak only orders people within a tie; it never breaks one.
+      (a, b) => a.weeksWon === b.weeksWon && a.total === b.total,
     );
 
     return {

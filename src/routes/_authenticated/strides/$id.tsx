@@ -3,8 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { getChallenge, inviteToChallenge } from "@/lib/challenges.functions";
-import { deleteWorkout } from "@/lib/board.functions";
-import { TrashIcon } from "@/components/TrashIcon";
+import { PhotoTile, PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
 import { AccountChip } from "@/components/AccountChip";
 import { formatDay } from "@/lib/format";
 
@@ -58,20 +57,9 @@ function StrideDetail() {
     retry: false,
   });
 
-  const queryClient = useQueryClient();
-  const removeWorkout = useServerFn(deleteWorkout);
-
-  async function handleDeleteProof(workoutId: string) {
-    if (!window.confirm("Delete this workout? This can't be undone.")) return;
-    await removeWorkout({ data: { id: workoutId } });
-    queryClient.invalidateQueries({ queryKey: ["stride"] });
-    queryClient.invalidateQueries({ queryKey: ["board"] });
-    queryClient.invalidateQueries({ queryKey: ["history"] });
-    queryClient.invalidateQueries({ queryKey: ["strides"] });
-  }
-
   const current = data?.weeksData.find((w) => w.isCurrent);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [openPhoto, setOpenPhoto] = useState<ViewerPhoto | null>(null);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background font-body text-foreground">
@@ -270,8 +258,8 @@ function StrideDetail() {
                 Proof this week
               </div>
               {data.proofs.length === 0 ? (
-                <div className="grid grid-cols-3 gap-3">
-                  {[0, 1, 2].map((i) => (
+                <div className="grid grid-cols-2 gap-3">
+                  {[0, 1].map((i) => (
                     <div
                       key={i}
                       className="grid aspect-square place-items-center rounded-xl border border-dashed border-white/10 bg-frost/[0.03]"
@@ -283,41 +271,9 @@ function StrideDetail() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {data.proofs.map((p) => (
-                    <figure
-                      key={p.id}
-                      className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-border"
-                    >
-                      {p.url ? (
-                        <img
-                          src={p.url}
-                          alt={`Workout proof by ${p.name}`}
-                          loading="lazy"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="grid h-full w-full place-items-center bg-steel">
-                          <span className="font-display text-2xl text-mist">✓</span>
-                        </div>
-                      )}
-                      {p.mine ? (
-                        <button
-                          onClick={() => handleDeleteProof(p.id)}
-                          aria-label="Delete workout"
-                          title="Delete workout"
-                          className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-ink/70 text-frost backdrop-blur-sm transition hover:bg-destructive hover:text-frost"
-                        >
-                          <TrashIcon className="size-3.5" />
-                        </button>
-                      ) : null}
-                      <figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-ink/60 p-2 backdrop-blur-sm">
-                        <span className="truncate text-[11px] leading-none text-frost">
-                          {p.name}
-                          {p.note ? ` · ${p.note}` : ""}
-                        </span>
-                      </figcaption>
-                    </figure>
+                    <PhotoTile key={p.id} photo={p} onOpen={() => setOpenPhoto(p)} />
                   ))}
                 </div>
               )}
@@ -360,7 +316,10 @@ function StrideDetail() {
                           <span className="w-6 shrink-0 font-display text-xs text-frost/50">
                             {rankLabel(r.rank, r.workouts > 0)}
                           </span>
-                          <span className="min-w-0 flex-1 truncate text-frost">{r.name}</span>
+                          <span className="flex min-w-0 flex-1 items-center gap-2">
+                            <span className="truncate text-frost">{r.name}</span>
+                            {r.tied && r.workouts > 0 && <TieBadge />}
+                          </span>
                           <span className="shrink-0 text-xs text-mist">{r.streak}d streak</span>
                           <span className="w-6 shrink-0 text-right font-display font-bold text-frost">
                             {r.workouts}
@@ -383,6 +342,8 @@ function StrideDetail() {
                 ))}
               </div>
             </section>
+
+            {openPhoto && <PhotoViewer photo={openPhoto} onClose={() => setOpenPhoto(null)} />}
 
             {inviteOpen && (
               <InviteFriendsModal

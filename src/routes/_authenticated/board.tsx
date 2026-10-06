@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,9 +9,9 @@ import {
   addFriend,
   respondToRequest,
   logWorkout,
-  deleteWorkout,
 } from "@/lib/board.functions";
-import { TrashIcon } from "@/components/TrashIcon";
+import { PhotoTile, PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
+import { listPhotos } from "@/lib/photos.functions";
 import { AccountChip } from "@/components/AccountChip";
 import { listMyChallenges, respondToInvite } from "@/lib/challenges.functions";
 import { formatDayShort } from "@/lib/format";
@@ -60,16 +60,6 @@ function Board() {
 
   const [logOpen, setLogOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const removeWorkout = useServerFn(deleteWorkout);
-
-  async function handleDeleteProof(id: string) {
-    if (!window.confirm("Delete this workout? This can't be undone.")) return;
-    await removeWorkout({ data: { id } });
-    queryClient.invalidateQueries({ queryKey: ["board"] });
-    queryClient.invalidateQueries({ queryKey: ["history"] });
-    queryClient.invalidateQueries({ queryKey: ["strides"] });
-    queryClient.invalidateQueries({ queryKey: ["stride"] });
-  }
 
   async function handleSignOut() {
     await queryClient.cancelQueries();
@@ -159,63 +149,7 @@ function Board() {
         {/* Strides */}
         <StridesSection />
 
-        {/* Proof */}
-        <section className="mb-8 animate-rise" style={{ animationDelay: ".12s" }}>
-          <div className="mb-4 flex items-center gap-3">
-            <span className="font-display text-xs font-bold uppercase tracking-[0.16em] text-volt">
-              Proof
-            </span>
-            <span className="ml-auto text-xs text-mist">This week</span>
-          </div>
-          {!board ? null : board.proofs.length === 0 ? (
-            <div className="glass-card rounded-2xl p-6 text-center">
-              <p className="text-sm text-mist">
-                No workouts logged yet this week. Be the first — post your proof.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {board.proofs.map((p) => (
-                <figure
-                  key={p.id}
-                  className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-border"
-                >
-                  {p.url ? (
-                    <img
-                      src={p.url}
-                      alt={`Workout proof by ${p.name}`}
-                      loading="lazy"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="grid h-full w-full place-items-center bg-steel">
-                      <span className="font-display text-2xl text-mist">✓</span>
-                    </div>
-                  )}
-                  {p.mine ? (
-                    <button
-                      onClick={() => handleDeleteProof(p.id)}
-                      aria-label="Delete workout"
-                      title="Delete workout"
-                      className="absolute right-1.5 top-1.5 grid size-7 place-items-center rounded-full bg-ink/70 text-frost backdrop-blur-sm transition hover:bg-destructive hover:text-frost"
-                    >
-                      <TrashIcon className="size-3.5" />
-                    </button>
-                  ) : null}
-                  <figcaption className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-ink/60 p-2 backdrop-blur-sm">
-                    <span className="grid size-4 shrink-0 place-items-center rounded-full bg-volt font-display text-[10px] font-bold leading-none text-ink">
-                      ✓
-                    </span>
-                    <span className="truncate text-[11px] leading-none text-frost">
-                      {p.name}
-                      {p.note ? ` · ${p.note}` : ""}
-                    </span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
-        </section>
+        <PhotosSection />
 
         {/* Friends */}
         <section className="mb-10 animate-rise" style={{ animationDelay: ".18s" }}>
@@ -357,6 +291,7 @@ function LogWorkoutModal({ onClose }: { onClose: () => void }) {
       }
       await log({ data: { photoPath, note: note || undefined } });
       await queryClient.invalidateQueries({ queryKey: ["board"] });
+      queryClient.invalidateQueries({ queryKey: ["photos"] });
       queryClient.invalidateQueries({ queryKey: ["history"] });
       queryClient.invalidateQueries({ queryKey: ["stride"] });
       onClose();
@@ -520,6 +455,61 @@ function AddFriendModal({ onClose }: { onClose: () => void }) {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Every proof photo from you and your friends, all time, two per row. */
+function PhotosSection() {
+  const fetchPhotos = useServerFn(listPhotos);
+  const [open, setOpen] = useState<ViewerPhoto | null>(null);
+  const { data, isPending, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
+    queryKey: ["photos"],
+    queryFn: ({ pageParam }) => fetchPhotos({ data: { before: pageParam } }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.nextCursor ?? undefined,
+  });
+  const photos = data?.pages.flatMap((p) => p.photos) ?? [];
+
+  return (
+    <section className="mb-8 animate-rise" style={{ animationDelay: ".12s" }}>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="font-display text-xs font-bold uppercase tracking-[0.16em] text-volt">
+          Photos
+        </span>
+        <span className="ml-auto text-xs text-mist">You and your friends · all time</span>
+      </div>
+      {isPending ? null : photos.length === 0 ? (
+        <div className="glass-card rounded-2xl p-6 text-center">
+          <p className="text-sm text-mist">
+            No workout photos yet. Be the first — post your proof.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            {photos.map((p) => (
+              <PhotoTile
+                key={p.id}
+                photo={p}
+                likeCount={p.likeCount}
+                commentCount={p.commentCount}
+                onOpen={() => setOpen(p)}
+              />
+            ))}
+          </div>
+          {hasNextPage && (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="mt-4 w-full rounded-full bg-secondary py-3 font-display text-sm font-bold text-frost ring-1 ring-border transition hover:bg-accent disabled:opacity-50"
+            >
+              {isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </>
+      )}
+      {open && <PhotoViewer photo={open} onClose={() => setOpen(null)} />}
+    </section>
   );
 }
 
