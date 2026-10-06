@@ -12,6 +12,8 @@ import {
 } from "@/lib/board.functions";
 import { PhotoTile, PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
 import { listPhotos } from "@/lib/photos.functions";
+import { InviteSheet } from "@/components/InviteSheet";
+import { QrCode } from "lucide-react";
 import { AccountChip } from "@/components/AccountChip";
 import { listMyChallenges, respondToInvite } from "@/lib/challenges.functions";
 import { formatDayShort } from "@/lib/format";
@@ -60,6 +62,7 @@ function Board() {
 
   const [logOpen, setLogOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   async function handleSignOut() {
     await queryClient.cancelQueries();
@@ -158,8 +161,15 @@ function Board() {
               Friends
             </span>
             <button
+              onClick={() => setInviteOpen(true)}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-volt px-3 py-1.5 text-xs font-bold text-ink transition hover:brightness-105"
+            >
+              <QrCode className="size-3.5" aria-hidden="true" />
+              Invite
+            </button>
+            <button
               onClick={() => setAddOpen(true)}
-              className="ml-auto inline-flex items-center gap-1 px-2 py-2 text-xs font-medium text-frost/70 transition-colors hover:text-volt"
+              className="inline-flex items-center gap-1 px-2 py-2 text-xs font-medium text-frost/70 transition-colors hover:text-volt"
             >
               <span className="grid size-5 place-items-center rounded-full text-sm leading-none ring-1 ring-frost/25">
                 +
@@ -235,6 +245,7 @@ function Board() {
 
       {logOpen && <LogWorkoutModal onClose={() => setLogOpen(false)} />}
       {addOpen && <AddFriendModal onClose={() => setAddOpen(false)} />}
+      {inviteOpen && <InviteSheet onClose={() => setInviteOpen(false)} />}
     </div>
   );
 }

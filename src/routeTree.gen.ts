@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedBoardRouteImport } from './routes/_authenticated/board'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as JoinCodeRouteImport } from './routes/join.$code'
 import { Route as AuthenticatedStridesIdRouteImport } from './routes/_authenticated/strides/$id'
 import { Route as AuthenticatedStridesNewRouteImport } from './routes/_authenticated/strides/new'
 
@@ -47,6 +48,11 @@ const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const JoinCodeRoute = JoinCodeRouteImport.update({
+  id: '/join/$code',
+  path: '/join/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedStridesIdRoute = AuthenticatedStridesIdRouteImport.update({
   id: '/strides/$id',
   path: '/strides/$id',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/board': typeof AuthenticatedBoardRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/join/$code': typeof JoinCodeRoute
   '/strides/$id': typeof AuthenticatedStridesIdRoute
   '/strides/new': typeof AuthenticatedStridesNewRoute
 }
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/board': typeof AuthenticatedBoardRoute
   '/history': typeof AuthenticatedHistoryRoute
+  '/join/$code': typeof JoinCodeRoute
   '/strides/$id': typeof AuthenticatedStridesIdRoute
   '/strides/new': typeof AuthenticatedStridesNewRoute
 }
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/board': typeof AuthenticatedBoardRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/join/$code': typeof JoinCodeRoute
   '/_authenticated/strides/$id': typeof AuthenticatedStridesIdRoute
   '/_authenticated/strides/new': typeof AuthenticatedStridesNewRoute
 }
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/board'
     | '/history'
+    | '/join/$code'
     | '/strides/$id'
     | '/strides/new'
   fileRoutesByTo: FileRoutesByTo
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/board'
     | '/history'
+    | '/join/$code'
     | '/strides/$id'
     | '/strides/new'
   id:
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/board'
     | '/_authenticated/history'
+    | '/join/$code'
     | '/_authenticated/strides/$id'
     | '/_authenticated/strides/new'
   fileRoutesById: FileRoutesById
@@ -123,6 +135,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  JoinCodeRoute: typeof JoinCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -169,6 +182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/join/$code': {
+      id: '/join/$code'
+      path: '/join/$code'
+      fullPath: '/join/$code'
+      preLoaderRoute: typeof JoinCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/strides/$id': {
       id: '/_authenticated/strides/$id'
       path: '/strides/$id'
@@ -208,6 +228,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  JoinCodeRoute: JoinCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

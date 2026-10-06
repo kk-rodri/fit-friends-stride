@@ -14,11 +14,18 @@ export const Route = createFileRoute("/auth")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  // Where to go after signing in, e.g. back to an invite link. Same-site paths only.
+  validateSearch: (search: Record<string, unknown>): { next?: string } => {
+    const next = typeof search["next"] === "string" ? search["next"] : undefined;
+    // "//x" and "/\\x" would leave the site, so only plain "/path" is allowed.
+    return next && /^\/(?![/\\])/.test(next) ? { next } : {};
+  },
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
+  const next = Route.useSearch().next ?? "/board";
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,7 +75,7 @@ function AuthPage() {
           password,
           options: {
             data: { username: uname, display_name: uname },
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: `${window.location.origin}${next}`,
           },
         });
         if (error) throw error;
@@ -80,7 +87,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
-      navigate({ to: "/board" });
+      navigate({ href: next });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -90,10 +97,10 @@ function AuthPage() {
 
   async function handleGoogle() {
     setError(null);
-    // Supabase redirects to Google and back to /board with the session in the URL.
+    // Supabase redirects to Google and back to `next` with the session in the URL.
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/board` },
+      options: { redirectTo: `${window.location.origin}${next}` },
     });
     if (error) setError(error.message ?? "Google sign-in failed");
   }

@@ -127,6 +127,42 @@ export type Database = {
           },
         ]
       }
+      invites: {
+        Row: {
+          challenge_id: string | null
+          code: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id?: string | null
+          code: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string | null
+          code?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

@@ -5,6 +5,8 @@ import { useState } from "react";
 import { getChallenge, inviteToChallenge } from "@/lib/challenges.functions";
 import { PhotoTile, PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
 import { AccountChip } from "@/components/AccountChip";
+import { InviteSheet } from "@/components/InviteSheet";
+import { QrCode } from "lucide-react";
 import { formatDay } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/strides/$id")({
@@ -59,6 +61,7 @@ function StrideDetail() {
 
   const current = data?.weeksData.find((w) => w.isCurrent);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [openPhoto, setOpenPhoto] = useState<ViewerPhoto | null>(null);
 
   return (
@@ -216,8 +219,17 @@ function StrideDetail() {
                 </span>
                 {data.isOwner && (
                   <button
+                    onClick={() => setShareOpen(true)}
+                    className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-volt px-3 py-1.5 text-xs font-bold text-ink transition hover:brightness-105"
+                  >
+                    <QrCode className="size-3.5" aria-hidden="true" />
+                    Invite link
+                  </button>
+                )}
+                {data.isOwner && (
+                  <button
                     onClick={() => setInviteOpen(true)}
-                    className="ml-auto inline-flex items-center gap-1 px-2 py-2 text-xs font-medium text-frost/70 transition-colors hover:text-volt"
+                    className="inline-flex items-center gap-1 px-2 py-2 text-xs font-medium text-frost/70 transition-colors hover:text-volt"
                   >
                     <span className="grid size-5 place-items-center rounded-full text-sm leading-none ring-1 ring-frost/25">
                       +
@@ -342,6 +354,14 @@ function StrideDetail() {
                 ))}
               </div>
             </section>
+
+            {shareOpen && (
+              <InviteSheet
+                challengeId={data.id}
+                strideName={data.name}
+                onClose={() => setShareOpen(false)}
+              />
+            )}
 
             {openPhoto && <PhotoViewer photo={openPhoto} onClose={() => setOpenPhoto(null)} />}
 
