@@ -338,35 +338,32 @@ export const getChallenge = createServerFn({ method: "GET" })
       });
     }
 
-    // Proof photos from the current week of the challenge.
-    const curStart = addDays(start, Math.max(currentIndex, 0) * 7);
-    const curEnd = addDays(curStart, 7);
-    const proofs = [] as {
-      id: string;
-      url: string | null;
-      name: string;
-      note: string | null;
-      mine: boolean;
-    }[];
-    for (const w of workouts ?? []) {
-      const t = new Date(w.created_at).getTime();
-      if (t < curStart.getTime() || t >= curEnd.getTime()) continue;
-      if (proofs.length >= 12) break;
-      let url: string | null = null;
-      if (w.photo_path) {
-        const { data: signed } = await supabaseAdmin.storage
-          .from("proofs")
-          .createSignedUrl(w.photo_path, 3600);
-        url = signed?.signedUrl ?? null;
-      }
-      proofs.push({
-        id: w.id,
-        url,
-        name: nameOf(w.user_id),
-        note: w.note,
-        mine: w.user_id === userId,
-      });
-    }
+    // Every proof photo from the whole Stride, newest first (workouts is already
+    // limited to members and the Stride's dates, newest first).
+    const photoWorkouts = (workouts ?? []).filter((w) => w.photo_path).slice(0, 200);
+    const photoIds = photoWorkouts.map((w) => w.id);
+    const [{ data: signed }, { data: likes }, { data: comments }] = await Promise.all([
+      photoWorkouts.length
+        ? supabaseAdmin.storage.from("proofs").createSignedUrls(
+            photoWorkouts.map((w) => w.photo_path!),
+            3600,
+          )
+        : Promise.resolve({ data: [] as { path: string | null; signedUrl: string }[] }),
+      supabaseAdmin.from("workout_likes").select("workout_id").in("workout_id", photoIds),
+      supabaseAdmin.from("workout_comments").select("workout_id").in("workout_id", photoIds),
+    ]);
+    const countBy = (rows: { workout_id: string }[] | null, id: string) =>
+      (rows ?? []).filter((r) => r.workout_id === id).length;
+    const proofs = photoWorkouts.map((w) => ({
+      id: w.id,
+      url: (signed ?? []).find((s) => s.path === w.photo_path)?.signedUrl ?? null,
+      name: nameOf(w.user_id),
+      note: w.note,
+      createdAt: w.created_at,
+      mine: w.user_id === userId,
+      likeCount: countBy(likes, w.id),
+      commentCount: countBy(comments, w.id),
+    }));
 
     // Overall standings across the whole Stride: total workouts, weeks won,
     // and best single-week streak.

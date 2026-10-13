@@ -59,7 +59,14 @@ function StrideDetail() {
     retry: false,
   });
 
-  const current = data?.weeksData.find((w) => w.isCurrent);
+  const [tab, setTab] = useState<"photos" | "weekly">("photos");
+  // Current week first, then earlier weeks newest to oldest, upcoming weeks last.
+  const weeksInOrder = [...(data?.weeksData ?? [])].sort(
+    (a, b) =>
+      Number(b.isCurrent) - Number(a.isCurrent) ||
+      Number(b.started) - Number(a.started) ||
+      (a.started ? b.index - a.index : a.index - b.index),
+  );
   const [inviteOpen, setInviteOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [openPhoto, setOpenPhoto] = useState<ViewerPhoto | null>(null);
@@ -155,60 +162,126 @@ function StrideDetail() {
               </div>
             </section>
 
-            {/* This week */}
+            {/* Photos / weekly leaderboard */}
             <section className="mt-8 animate-rise" style={{ animationDelay: ".06s" }}>
-              <div className="glass-card rounded-[22px] p-5">
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="font-display text-xs font-extrabold uppercase tracking-[0.16em] text-volt">
-                    {data.over ? "Final week" : "This week"}
-                  </span>
-                  <span className="ml-auto text-xs text-mist">
-                    {(current ?? data.weeksData[data.weeksData.length - 1])?.label}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {(current ?? data.weeksData[data.weeksData.length - 1])?.rows.map((row) => (
+              <div
+                role="tablist"
+                aria-label="Stride details"
+                className="mb-4 flex rounded-full bg-frost/[0.05] p-1 ring-1 ring-white/[0.07]"
+              >
+                {(
+                  [
+                    ["photos", "Photos"],
+                    ["weekly", "Weekly leaderboard"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    role="tab"
+                    aria-selected={tab === key}
+                    onClick={() => setTab(key)}
+                    className={`flex-1 rounded-full py-2 font-display text-sm font-semibold transition ${
+                      tab === key
+                        ? "bg-frost/[0.12] text-frost ring-1 ring-white/10"
+                        : "text-mist hover:text-frost"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {tab === "photos" ? (
+                data.proofs.length === 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {[0, 1].map((i) => (
+                      <div
+                        key={i}
+                        className="grid aspect-square place-items-center rounded-2xl border border-dashed border-white/10 bg-frost/[0.03]"
+                      >
+                        <span className="px-2 text-center text-[11px] leading-tight text-mist/70">
+                          Proof photo
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      {data.proofs.map((p) => (
+                        <PhotoTile
+                          key={p.id}
+                          photo={p}
+                          likeCount={p.likeCount}
+                          commentCount={p.commentCount}
+                          onOpen={() => setOpenPhoto(p)}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-3 text-center text-xs text-mist">
+                      All photos from this Stride, newest first
+                    </p>
+                  </>
+                )
+              ) : (
+                <div className="space-y-3">
+                  {weeksInOrder.map((w) => (
                     <div
-                      key={row.userId}
-                      className={`flex items-center gap-4 rounded-2xl p-4 ring-1 ${
-                        row.rank === 1 && row.workouts > 0
-                          ? "bg-frost/[0.08] ring-white/10"
-                          : "bg-frost/[0.04] ring-white/[0.06]"
-                      } ${row.isMe ? "outline-1 outline-volt/40" : ""}`}
+                      key={w.index}
+                      className={`rounded-[18px] p-4 ring-1 ${
+                        w.isCurrent
+                          ? "bg-volt/[0.06] ring-volt/25"
+                          : "bg-frost/[0.05] ring-white/[0.07]"
+                      } ${w.started ? "" : "opacity-60"}`}
                     >
-                      <div
-                        className={`w-10 shrink-0 font-display text-2xl font-extrabold leading-none ${
-                          row.rank === 1 && row.workouts > 0 ? "text-volt" : "text-frost/45"
-                        }`}
-                      >
-                        {rankLabel(row.rank, row.workouts > 0)}
-                      </div>
-                      <div
-                        className={`grid size-11 shrink-0 place-items-center rounded-full font-display text-sm font-semibold text-frost ${avatarClass(row.userId)}`}
-                      >
-                        {row.initials}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate font-display font-semibold leading-tight text-frost">
-                            {row.name}
+                      <div className="mb-2 flex items-center gap-3">
+                        <span className="font-display text-sm font-semibold text-frost">
+                          Week {w.index}
+                        </span>
+                        {w.isCurrent && (
+                          <span className="rounded-full bg-volt px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-ink">
+                            Now
                           </span>
-                          {row.tied && row.workouts > 0 && <TieBadge />}
-                        </div>
-                        <div className="text-xs text-mist">
-                          {row.streak} day{row.streak === 1 ? "" : "s"} in a row
-                        </div>
+                        )}
+                        {!w.started && (
+                          <span className="text-[10px] uppercase tracking-widest text-mist">
+                            Upcoming
+                          </span>
+                        )}
+                        <span className="ml-auto text-xs text-mist">{w.label}</span>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <div className="font-display text-2xl font-bold leading-none text-frost">
-                          {row.workouts}
-                        </div>
-                        <div className="text-[10px] uppercase tracking-widest text-mist">times</div>
+                      <div className="space-y-1.5">
+                        {w.rows.map((r) => (
+                          <div key={r.userId} className="flex items-center gap-3 text-sm">
+                            <span className="w-6 shrink-0 font-display text-xs text-frost/50">
+                              {rankLabel(r.rank, r.workouts > 0)}
+                            </span>
+                            <span className="flex min-w-0 flex-1 items-center gap-2">
+                              <span className="truncate text-frost">{r.name}</span>
+                              {r.tied && r.workouts > 0 && <TieBadge />}
+                            </span>
+                            <span className="shrink-0 text-xs text-mist">{r.streak}d streak</span>
+                            <span className="w-6 shrink-0 text-right font-display font-bold text-frost">
+                              {r.workouts}
+                            </span>
+                          </div>
+                        ))}
+                        {w.rows.length === 0 && (
+                          <p className="text-xs text-mist">No members yet.</p>
+                        )}
+                        {w.result && (
+                          <p className="pt-1 text-xs text-mist">
+                            {w.result.kind === "tied" ? "Tied: " : "Won by "}
+                            <span className="font-semibold text-frost">
+                              {w.result.names.join(" & ")}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
             </section>
 
             {/* Weeks won */}
@@ -264,96 +337,6 @@ function StrideDetail() {
               )}
             </section>
 
-            {/* Proof */}
-            <section className="mt-8 animate-rise" style={{ animationDelay: ".14s" }}>
-              <div className="mb-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-volt">
-                Proof this week
-              </div>
-              {data.proofs.length === 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {[0, 1].map((i) => (
-                    <div
-                      key={i}
-                      className="grid aspect-square place-items-center rounded-xl border border-dashed border-white/10 bg-frost/[0.03]"
-                    >
-                      <span className="px-2 text-center text-[11px] leading-tight text-mist/70">
-                        Proof photo
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {data.proofs.map((p) => (
-                    <PhotoTile key={p.id} photo={p} onOpen={() => setOpenPhoto(p)} />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* Every week of the Stride */}
-            <section className="mt-8 animate-rise" style={{ animationDelay: ".18s" }}>
-              <div className="mb-3 font-display text-xs font-bold uppercase tracking-[0.16em] text-volt">
-                Week by week
-              </div>
-              <div className="space-y-3">
-                {data.weeksData.map((w) => (
-                  <div
-                    key={w.index}
-                    className={`rounded-[18px] p-4 ring-1 ${
-                      w.isCurrent
-                        ? "bg-volt/[0.06] ring-volt/25"
-                        : "bg-frost/[0.05] ring-white/[0.07]"
-                    } ${w.started ? "" : "opacity-60"}`}
-                  >
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className="font-display text-sm font-semibold text-frost">
-                        Week {w.index}
-                      </span>
-                      {w.isCurrent && (
-                        <span className="rounded-full bg-volt px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-ink">
-                          Now
-                        </span>
-                      )}
-                      {!w.started && (
-                        <span className="text-[10px] uppercase tracking-widest text-mist">
-                          Upcoming
-                        </span>
-                      )}
-                      <span className="ml-auto text-xs text-mist">{w.label}</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      {w.rows.map((r) => (
-                        <div key={r.userId} className="flex items-center gap-3 text-sm">
-                          <span className="w-6 shrink-0 font-display text-xs text-frost/50">
-                            {rankLabel(r.rank, r.workouts > 0)}
-                          </span>
-                          <span className="flex min-w-0 flex-1 items-center gap-2">
-                            <span className="truncate text-frost">{r.name}</span>
-                            {r.tied && r.workouts > 0 && <TieBadge />}
-                          </span>
-                          <span className="shrink-0 text-xs text-mist">{r.streak}d streak</span>
-                          <span className="w-6 shrink-0 text-right font-display font-bold text-frost">
-                            {r.workouts}
-                          </span>
-                        </div>
-                      ))}
-                      {w.rows.length === 0 && (
-                        <p className="text-xs text-mist">No members yet.</p>
-                      )}
-                      {w.result && (
-                        <p className="pt-1 text-xs text-mist">
-                          {w.result.kind === "tied" ? "Tied: " : "Won by "}
-                          <span className="font-semibold text-frost">
-                            {w.result.names.join(" & ")}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
 
             {shareOpen && (
               <InviteSheet
