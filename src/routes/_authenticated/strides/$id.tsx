@@ -6,6 +6,7 @@ import { getChallenge, inviteToChallenge } from "@/lib/challenges.functions";
 import { PhotoTile, PhotoViewer, type ViewerPhoto } from "@/components/PhotoViewer";
 import { AccountChip } from "@/components/AccountChip";
 import { InviteSheet } from "@/components/InviteSheet";
+import { LogWorkoutButton } from "@/components/LogWorkout";
 import { QrCode } from "lucide-react";
 import { formatDay } from "@/lib/format";
 
@@ -344,6 +345,11 @@ function StrideDetail() {
                 strideName={data.name}
                 onClose={() => setShareOpen(false)}
               />
+            )}
+
+            {/* Members can log from here while the Stride is running. */}
+            {data.standings.some((s) => s.isMe) && !data.notStarted && !data.over && (
+              <LogWorkoutButton />
             )}
 
             {openPhoto && <PhotoViewer photo={openPhoto} onClose={() => setOpenPhoto(null)} />}
