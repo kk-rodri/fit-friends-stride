@@ -435,6 +435,7 @@ export const getChallenge = createServerFn({ method: "GET" })
       enabled: challenge.fund_enabled,
       amountCents,
       venmo: challenge.fund_venmo,
+      holderId: challenge.owner_id,
       holderName: nameOf(challenge.owner_id),
       potCents: debts.filter((d) => d.status === "confirmed").reduce((n, d) => n + d.amountCents, 0),
       debts: [...debts].sort((a, b) => b.weekIndex - a.weekIndex || a.name.localeCompare(b.name)),

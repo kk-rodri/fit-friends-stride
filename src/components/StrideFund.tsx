@@ -64,6 +64,12 @@ export function StrideFund({
 
   const myOpen = fund.debts.filter((d) => d.mine && d.status === "owed");
   const amount = formatCents(fund.amountCents);
+  // The holder's own losses never move money: it's already in their Venmo,
+  // so they just count it in and it shows as the holder's share.
+  const isHolderDebt = (d: Debt) => d.userId === fund.holderId;
+  const holderShareCents = fund.debts
+    .filter((d) => isHolderDebt(d) && d.status === "confirmed")
+    .reduce((n, d) => n + d.amountCents, 0);
 
   return (
     <div className="space-y-4">
@@ -76,6 +82,12 @@ export function StrideFund({
           {amount} per loss · held by {fund.holderName}
           {fund.venmo ? ` on Venmo (@${fund.venmo})` : ""}
         </p>
+        {holderShareCents > 0 && (
+          <p className="mt-1 text-xs text-mist">
+            Includes {formatCents(holderShareCents)} {fund.holderName} counted in from their own
+            losses (no transfer needed, it's already with them).
+          </p>
+        )}
       </div>
 
       {myOpen.map((d) => {
@@ -88,6 +100,12 @@ export function StrideFund({
             <p className="text-xs text-mist">
               Week {d.weekIndex} · last place with {d.workouts} workout{d.workouts === 1 ? "" : "s"}
             </p>
+            {isOwner && (
+              <p className="mt-2 text-xs text-mist">
+                You hold the pot, so there's nothing to send: the money is already in your Venmo.
+                Count it in so everyone sees your share.
+              </p>
+            )}
             {fund.venmo && !isOwner && (
               <a
                 href={venmoLink(
@@ -109,7 +127,7 @@ export function StrideFund({
               disabled={busyKey === key}
               className="mt-2 w-full rounded-full py-3 font-display text-sm font-bold text-frost ring-1 ring-border transition hover:bg-frost/[0.06] disabled:opacity-50"
             >
-              {isOwner ? "Mark as added to the pot" : "I paid"}
+              {isOwner ? `Count my ${formatCents(d.amountCents)} in the pot` : "I paid"}
             </button>
           </div>
         );
@@ -154,7 +172,9 @@ export function StrideFund({
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide ${STATUS[d.status].cls}`}
                     >
-                      {STATUS[d.status].label}
+                      {isHolderDebt(d) && d.status === "confirmed"
+                        ? "Holder's share"
+                        : STATUS[d.status].label}
                     </span>
                   )}
                 </div>
