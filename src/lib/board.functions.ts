@@ -11,6 +11,14 @@ function weekStartUtc(): Date {
   return d;
 }
 
+/** "<userId>/<file>" with no extra folders or "..": the only shape uploads use. */
+function isOwnPhotoPath(path: string, userId: string): boolean {
+  const [folder, file, ...rest] = path.split("/");
+  return (
+    folder === userId && !!file && rest.length === 0 && /^[\w-]+\.[A-Za-z0-9]{1,5}$/.test(file)
+  );
+}
+
 function initials(name: string): string {
   return name
     .split(/\s+/)
@@ -191,10 +199,7 @@ export const addFriend = createServerFn({ method: "POST" })
 
     if (reverse) {
       if (reverse.status === "pending") {
-        await supabase
-          .from("friendships")
-          .update({ status: "accepted" })
-          .eq("id", reverse.id);
+        await supabase.from("friendships").update({ status: "accepted" }).eq("id", reverse.id);
       }
       return { ok: true };
     }
@@ -220,10 +225,7 @@ export const respondToRequest = createServerFn({ method: "POST" })
         .eq("id", data.friendshipId);
       if (error) throw new Error(error.message);
     } else {
-      const { error } = await supabase
-        .from("friendships")
-        .delete()
-        .eq("id", data.friendshipId);
+      const { error } = await supabase.from("friendships").delete().eq("id", data.friendshipId);
       if (error) throw new Error(error.message);
     }
     return { ok: true };
@@ -238,6 +240,11 @@ export const logWorkout = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    // Photos must be in the uploader's own folder ("<userId>/<file>"), so a
+    // workout can't point at (and later delete) someone else's photo.
+    if (data.photoPath && !isOwnPhotoPath(data.photoPath, userId)) {
+      throw new Error("That photo isn't yours");
+    }
     const { error } = await supabase.from("workouts").insert({
       user_id: userId,
       photo_path: data.photoPath ?? null,
@@ -274,7 +281,7 @@ export const deleteWorkout = createServerFn({ method: "POST" })
     if (fetchErr || !workout) throw new Error("Workout not found");
     const { error } = await supabase.from("workouts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    if (workout.photo_path) {
+    if (workout.photo_path && isOwnPhotoPath(workout.photo_path, userId)) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       await supabaseAdmin.storage.from("proofs").remove([workout.photo_path]);
     }

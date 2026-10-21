@@ -50,7 +50,13 @@ function LogWorkoutModal({ onClose }: { onClose: () => void }) {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id;
         if (!userId) throw new Error("Not signed in");
-        const ext = file.name.split(".").pop() ?? "jpg";
+        // Short letters-and-digits extension only (the server rejects anything else).
+        const raw = file.name.includes(".") ? file.name.split(".").pop()! : "";
+        const ext =
+          raw
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "")
+            .slice(0, 5) || "jpg";
         photoPath = `${userId}/${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("proofs")
