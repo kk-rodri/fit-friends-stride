@@ -56,6 +56,9 @@ export type Database = {
       challenges: {
         Row: {
           created_at: string
+          fund_amount_cents: number | null
+          fund_enabled: boolean
+          fund_venmo: string | null
           id: string
           name: string
           owner_id: string
@@ -64,6 +67,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          fund_amount_cents?: number | null
+          fund_enabled?: boolean
+          fund_venmo?: string | null
           id?: string
           name: string
           owner_id: string
@@ -72,6 +78,9 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          fund_amount_cents?: number | null
+          fund_enabled?: boolean
+          fund_venmo?: string | null
           id?: string
           name?: string
           owner_id?: string
@@ -120,6 +129,51 @@ export type Database = {
           },
           {
             foreignKeyName: "friendships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fund_payments: {
+        Row: {
+          amount_cents: number
+          challenge_id: string
+          claimed_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          user_id: string
+          week_index: number
+        }
+        Insert: {
+          amount_cents: number
+          challenge_id: string
+          claimed_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          user_id: string
+          week_index: number
+        }
+        Update: {
+          amount_cents?: number
+          challenge_id?: string
+          claimed_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          user_id?: string
+          week_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_payments_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_payments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { lastPlace } from "@/lib/fund-rules";
 import { formatDayShort } from "@/lib/format";
 
 function initials(name: string): string {
@@ -13,13 +14,13 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-function toUtcDate(iso: string): Date {
+export function toUtcDate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(Date.UTC(y!, (m ?? 1) - 1, d ?? 1));
 }
 
 /** Monday of the week containing the given date (UTC). */
-function mondayOf(date: Date): Date {
+export function mondayOf(date: Date): Date {
   const d = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
   );
@@ -27,7 +28,7 @@ function mondayOf(date: Date): Date {
   return d;
 }
 
-function addDays(date: Date, days: number): Date {
+export function addDays(date: Date, days: number): Date {
   const d = new Date(date);
   d.setUTCDate(d.getUTCDate() + days);
   return d;
@@ -207,7 +208,7 @@ export const getChallenge = createServerFn({ method: "GET" })
 
     const { data: challenge } = await supabase
       .from("challenges")
-      .select("id, name, owner_id, start_date, weeks")
+      .select("id, name, owner_id, start_date, weeks, fund_enabled, fund_amount_cents, fund_venmo")
       .eq("id", data.id)
       .maybeSingle();
     if (!challenge) throw new Error("Challenge not found");
@@ -286,6 +287,8 @@ export const getChallenge = createServerFn({ method: "GET" })
         tied: boolean;
       }[];
       result: { kind: "won" | "tied"; names: string[] } | null;
+      finished: boolean;
+      losers: string[];
     }[];
 
     const wins = new Map<string, number>();
@@ -335,6 +338,8 @@ export const getChallenge = createServerFn({ method: "GET" })
         started,
         rows,
         result,
+        finished,
+        losers: finished ? lastPlace(rows) : [],
       });
     }
 
@@ -401,6 +406,40 @@ export const getChallenge = createServerFn({ method: "GET" })
       (a, b) => a.weeksWon === b.weeksWon && a.total === b.total,
     );
 
+    // Fund: last place of each finished week owes the creator; payments record
+    // "I paid" claims and the creator's confirmations.
+    const { data: payments } = await supabase
+      .from("fund_payments")
+      .select("week_index, user_id, amount_cents, claimed_at, confirmed_at")
+      .eq("challenge_id", challenge.id);
+    const amountCents = challenge.fund_amount_cents ?? 0;
+    const debts = weeksOut.flatMap((w) =>
+      w.losers.map((id) => {
+        const p = (payments ?? []).find((x) => x.week_index === w.index && x.user_id === id);
+        return {
+          weekIndex: w.index,
+          weekLabel: w.label,
+          userId: id,
+          name: nameOf(id),
+          workouts: w.rows.find((r) => r.userId === id)?.workouts ?? 0,
+          amountCents: p?.amount_cents ?? amountCents,
+          status: (p?.confirmed_at ? "confirmed" : p?.claimed_at ? "claimed" : "owed") as
+            | "owed"
+            | "claimed"
+            | "confirmed",
+          mine: id === userId,
+        };
+      }),
+    );
+    const fund = {
+      enabled: challenge.fund_enabled,
+      amountCents,
+      venmo: challenge.fund_venmo,
+      holderName: nameOf(challenge.owner_id),
+      potCents: debts.filter((d) => d.status === "confirmed").reduce((n, d) => n + d.amountCents, 0),
+      debts: [...debts].sort((a, b) => b.weekIndex - a.weekIndex || a.name.localeCompare(b.name)),
+    };
+
     return {
       id: challenge.id,
       name: challenge.name,
@@ -424,6 +463,7 @@ export const getChallenge = createServerFn({ method: "GET" })
         .map((m) => ({ userId: m.user_id, name: nameOf(m.user_id) })),
       weeksData: weeksOut,
       proofs,
+      fund,
       invitableFriends: invitableIds
         .map((id) => ({ userId: id, name: nameOf(id), initials: initials(nameOf(id)) }))
         .sort((a, b) => a.name.localeCompare(b.name)),

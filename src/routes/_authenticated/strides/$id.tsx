@@ -7,6 +7,7 @@ import { PhotoTile, PhotoViewer, type ViewerPhoto } from "@/components/PhotoView
 import { AccountChip } from "@/components/AccountChip";
 import { InviteSheet } from "@/components/InviteSheet";
 import { LogWorkoutButton } from "@/components/LogWorkout";
+import { StrideFund } from "@/components/StrideFund";
 import { QrCode } from "lucide-react";
 import { formatDay } from "@/lib/format";
 
@@ -60,7 +61,7 @@ function StrideDetail() {
     retry: false,
   });
 
-  const [tab, setTab] = useState<"photos" | "weekly">("photos");
+  const [tab, setTab] = useState<"photos" | "weekly" | "fund">("photos");
   // Current week first, then earlier weeks newest to oldest, upcoming weeks last.
   const weeksInOrder = [...(data?.weeksData ?? [])].sort(
     (a, b) =>
@@ -173,7 +174,8 @@ function StrideDetail() {
                 {(
                   [
                     ["photos", "Photos"],
-                    ["weekly", "Weekly leaderboard"],
+                    ["weekly", "Weekly"],
+                    ["fund", "Fund"],
                   ] as const
                 ).map(([key, label]) => (
                   <button
@@ -192,7 +194,14 @@ function StrideDetail() {
                 ))}
               </div>
 
-              {tab === "photos" ? (
+              {tab === "fund" ? (
+                <StrideFund
+                  challengeId={data.id}
+                  strideName={data.name}
+                  isOwner={data.isOwner}
+                  fund={data.fund}
+                />
+              ) : tab === "photos" ? (
                 data.proofs.length === 0 ? (
                   <div className="grid grid-cols-2 gap-3">
                     {[0, 1].map((i) => (
